@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = "7"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 import torch
 import pickle
 import argparse
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler', type=str, required=False, default='constant')
     parser.add_argument('--warmup_rate', type=float, required=False, default=0.1)
     parser.add_argument('--emotion_dim', type=int, required=False, default=200)
-    parser.add_argument('--window', type=int, required=False, default=2)
+    parser.add_argument('--window', type=int, required=False, default=3)
     parser.add_argument('--max_len', type=int, required=False, default=10)
     parser.add_argument('--posi_dim', type=int, required=False, default=100)
     parser.add_argument('--pag_dropout', required=False, type=float, default=0.1)

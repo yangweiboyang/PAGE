@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import RobertaModel
 from torch.nn.utils.rnn import pad_sequence
-
+from tcn import TemporalConvNet
 
 
 class UtterEncoder(nn.Module):
@@ -24,12 +24,16 @@ class UtterEncoder(nn.Module):
         self.norm = nn.LayerNorm(utter_dim)
         self.dropout = nn.Dropout(pag_dropout)
         self.mlp = MLP(utter_dim, ff_dim, mlp_dropout)
-
+        self.tcn_net = TemporalConvNet(768, num_channels=[768])
         
     def forward(self, conv_utterance, attention_mask,adj,emotion_label):
         processed_output = []
         for cutt, amsk in zip(conv_utterance, attention_mask):
             output_data = self.encoder(cutt, attention_mask=amsk).last_hidden_state  
+            output_data  = self.tcn_net(output_data.permute(0,2,1))
+            #output_data形状：([5, 27, 768])只有768是定值
+            output_data =output_data.permute(0,2,1)
+            
             pooler_output = torch.max(output_data, dim=1)[0]  
             mapped_output = self.mapping(pooler_output)  
             processed_output.append(mapped_output)
