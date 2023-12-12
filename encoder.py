@@ -31,7 +31,7 @@ class UtterEncoder(nn.Module):
         for cutt, amsk in zip(conv_utterance, attention_mask):
             output_data = self.encoder(cutt, attention_mask=amsk).last_hidden_state  
             output_data  = self.tcn_net(output_data.permute(0,2,1))
-            #output_data形状：([5, 27, 768])只有768是定值
+            #output_data形状：([5, 27, 768])只有768是定值.
             output_data =output_data.permute(0,2,1)
             
             pooler_output = torch.max(output_data, dim=1)[0]  
