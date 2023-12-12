@@ -24,7 +24,7 @@ class UtterEncoder(nn.Module):
         self.norm = nn.LayerNorm(utter_dim)
         self.dropout = nn.Dropout(pag_dropout)
         self.mlp = MLP(utter_dim, ff_dim, mlp_dropout)
-        self.tcn_net = TemporalConvNet(768, num_channels=[768])
+        self.tcn_net = TemporalConvNet(768, num_channels=[768])#
         
     def forward(self, conv_utterance, attention_mask,adj,emotion_label):
         processed_output = []
