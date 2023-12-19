@@ -1,0 +1,4 @@
+Namespace(accumulate_step=1, att_dropout=0.1, batch_size=4, emotion_dim=200, ff_dim=128, gpu_list='0', index=[0, 1, 2, 3, 4], lr=3e-05, max_len=10, mlp_dropout=0.1, model_size='base', n_epochs=10, nhead=6, num_bases=2, pag_dropout=0.1, posi_dim=100, save_dir='saves', scheduler='constant', seed=[0, 1, 2, 3, 4], utter_dim=300, valid_shuffle=True, warmup_rate=0.1, weight_decay=0.001, window=2)
+
+DEV fscore: 84.8(+-0.52)
+IE fscore: 70.21(+-1.25)

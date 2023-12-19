@@ -50,7 +50,7 @@ def train(model, model_path, train_loader, dev_loader, dd_loader, ie_loader,
             rel_adj = mask.clone()
             rel_adj = rel_adj.long().cuda()
                       
-            prediction = model(input_ids, attention_mask, mask, adj,label+1)
+            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index)
             
             ece_label_list.append(torch.flatten(ece_pair.data).cpu().numpy())
             ece_prediction_mask.append(torch.flatten(mask.data).cpu().numpy())
@@ -143,7 +143,7 @@ def valid(valid_type, model, data_loader, log):
             rel_adj = mask.clone()
             rel_adj = rel_adj.long().cuda()
             
-            prediction = model(input_ids, attention_mask, mask, adj,label+1)
+            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index)
 
             ece_prediction = torch.flatten(torch.gt(prediction.data, 0.5).long()).cpu().numpy()
             ece_prediction_list.append(ece_prediction)
@@ -217,7 +217,10 @@ def main(args, seed=0, index=0):
     scheduler_type = args.scheduler
     emotion_dim = args.emotion_dim
     
-
+    for data in train_loader:
+      
+            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, _ = data
+    
     nhead = args.nhead
     ff_dim = args.ff_dim
     att_dropout = args.att_dropout
@@ -265,7 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler', type=str, required=False, default='constant')
     parser.add_argument('--warmup_rate', type=float, required=False, default=0.1)
     parser.add_argument('--emotion_dim', type=int, required=False, default=200)
-    parser.add_argument('--window', type=int, required=False, default=3)
+    parser.add_argument('--window', type=int, required=False, default=2)
     parser.add_argument('--max_len', type=int, required=False, default=10)
     parser.add_argument('--posi_dim', type=int, required=False, default=100)
     parser.add_argument('--pag_dropout', required=False, type=float, default=0.1)

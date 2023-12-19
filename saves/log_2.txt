@@ -1,0 +1,81 @@
+Namespace(accumulate_step=1, att_dropout=0.1, batch_size=4, emotion_dim=200, ff_dim=128, gpu_list='0', index=[0, 1, 2, 3, 4], lr=3e-05, max_len=10, mlp_dropout=0.1, model_size='base', n_epochs=10, nhead=6, num_bases=2, pag_dropout=0.1, posi_dim=100, save_dir='saves', scheduler='constant', seed=[0, 1, 2, 3, 4], utter_dim=300, valid_shuffle=True, warmup_rate=0.1, weight_decay=0.001, window=2)
+
+seed = 2[Train] Epoch 1: ECE loss: 0.306125, Fscore: 0.6135
+[DEV]: Fscore: 0.8013
+[DD_test]: Fscore: 0.7668
+[IE_test]: Fscore: 0.6939
+[Train] Epoch 2: ECE loss: 0.217363, Fscore: 0.762
+[DEV]: Fscore: 0.833
+[DD_test]: Fscore: 0.8091
+[IE_test]: Fscore: 0.7079
+[Train] Epoch 3: ECE loss: 0.201015, Fscore: 0.7907
+[DEV]: Fscore: 0.8408
+[DD_test]: Fscore: 0.8111
+[IE_test]: Fscore: 0.7116
+[Train] Epoch 4: ECE loss: 0.186137, Fscore: 0.8118
+[DEV]: Fscore: 0.8202
+[DD_test]: Fscore: 0.797
+[IE_test]: Fscore: 0.7059
+[Train] Epoch 5: ECE loss: 0.172659, Fscore: 0.8268
+[DEV]: Fscore: 0.8307
+[DD_test]: Fscore: 0.8048
+[IE_test]: Fscore: 0.6898
+[Train] Epoch 6: ECE loss: 0.157771, Fscore: 0.8494
+[DEV]: Fscore: 0.8214
+[DD_test]: Fscore: 0.8016
+[IE_test]: Fscore: 0.6825
+[Train] Epoch 7: ECE loss: 0.144361, Fscore: 0.863
+[DEV]: Fscore: 0.8222
+[DD_test]: Fscore: 0.7952
+[IE_test]: Fscore: 0.6648
+[Train] Epoch 8: ECE loss: 0.131175, Fscore: 0.8797
+[DEV]: Fscore: 0.8223
+[DD_test]: Fscore: 0.7921
+[IE_test]: Fscore: 0.6535
+[Train] Epoch 9: ECE loss: 0.122257, Fscore: 0.8869
+[DEV]: Fscore: 0.8177
+[DD_test]: Fscore: 0.7969
+[IE_test]: Fscore: 0.6582
+[Train] Epoch 10: ECE loss: 0.114975, Fscore: 0.8976
+[DEV]: Fscore: 0.8224
+[DD_test]: Fscore: 0.8004
+[IE_test]: Fscore: 0.6724
+
+
+[FINAL--DEV]: best_Fscore: 0.8408
+
+              precision    recall  f1-score   support
+
+         neg     0.9610    0.9785    0.9697    2842.0
+         pos     0.7790    0.6555    0.7119     328.0
+
+    accuracy                         0.9451    3170.0
+   macro avg     0.8700    0.8170    0.8408    3170.0
+weighted avg     0.9421    0.9451    0.9430    3170.0
+
+
+
+[FINAL--DD_test]: best_Fscore: 0.8111
+
+              precision    recall  f1-score   support
+
+         neg     0.9551    0.9636    0.9593   14052.0
+         pos     0.6882    0.6395    0.6630    1767.0
+
+    accuracy                         0.9274   15819.0
+   macro avg     0.8216    0.8015    0.8111   15819.0
+weighted avg     0.9253    0.9274    0.9262   15819.0
+
+
+
+[FINAL--IE_test]: best_Fscore: 0.7116
+
+              precision    recall  f1-score   support
+
+         neg     0.9640    0.9707    0.9673   16528.0
+         pos     0.4835    0.4311    0.4558    1053.0
+
+    accuracy                         0.9383   17581.0
+   macro avg     0.7237    0.7009    0.7116   17581.0
+weighted avg     0.9352    0.9383    0.9367   17581.0
+
