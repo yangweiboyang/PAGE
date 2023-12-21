@@ -62,16 +62,7 @@ class PaG(nn.Module):
         # print("**********************lin50 spkear.shape,out.shape,adj_index.shape",spkear.shape,out.shape,adj_index.shape)
         #torch.Size([1, 10, 10])后面两个维度确定 torch.Size([1, 8, 300])最后一位300确定，第二维小于或者大于10
         #torch.Size([4, 10, 10]) torch.Size([4, 11, 300]) torch.Size([4, 2, 11, 11])第二位2是确定的，第三位和前面第二位一样
-        # spkear = spkear.unsqueeze(2).expand(-1, -1, 300, -1)
-        # out=out+spkear
-        # out1=out.size(0)
-        # out2=out.size(1)
-        # out3=out.size(2)
-        # spkear = spkear.expand(-1, -1, 300)
-        # out=torch.cat(spkear,out)
-        # out=out[:out1,:out2,:out3]
-        # print("*********************lin72 out,tensor_fixed",out.shape,tensor_fixed.shape)
-        # tensor_fixed = torch.cat(tensor_fixed, dim=2)
+
         out=torch.cat([out,tensor_fixed],dim=2)
         
         out=out[:,:,:300]

@@ -1,0 +1,121 @@
+Namespace(accumulate_step=1, att_dropout=0.1, batch_size=4, emotion_dim=200, ff_dim=128, gpu_list='0', index=[0, 1, 2, 3, 4], lr=3e-05, max_len=10, mlp_dropout=0.1, model_size='base', n_epochs=20, nhead=6, num_bases=2, pag_dropout=0.1, posi_dim=100, save_dir='saves', scheduler='constant', seed=[0, 1, 2, 3, 4], utter_dim=300, valid_shuffle=True, warmup_rate=0.1, weight_decay=0.001, window=3)
+
+seed = 3[Train] Epoch 1: ECE loss: 0.316086, Fscore: 0.5937
+[DEV]: Fscore: 0.7786
+[DD_test]: Fscore: 0.7562
+[IE_test]: Fscore: 0.6849
+[Train] Epoch 2: ECE loss: 0.215639, Fscore: 0.7635
+[DEV]: Fscore: 0.8324
+[DD_test]: Fscore: 0.8091
+[IE_test]: Fscore: 0.7071
+[Train] Epoch 3: ECE loss: 0.197347, Fscore: 0.7969
+[DEV]: Fscore: 0.8337
+[DD_test]: Fscore: 0.7989
+[IE_test]: Fscore: 0.6996
+[Train] Epoch 4: ECE loss: 0.18573, Fscore: 0.8081
+[DEV]: Fscore: 0.8529
+[DD_test]: Fscore: 0.8219
+[IE_test]: Fscore: 0.7113
+[Train] Epoch 5: ECE loss: 0.173224, Fscore: 0.8263
+[DEV]: Fscore: 0.8131
+[DD_test]: Fscore: 0.7844
+[IE_test]: Fscore: 0.6781
+[Train] Epoch 6: ECE loss: 0.157077, Fscore: 0.8475
+[DEV]: Fscore: 0.8399
+[DD_test]: Fscore: 0.8026
+[IE_test]: Fscore: 0.6612
+[Train] Epoch 7: ECE loss: 0.14584, Fscore: 0.8604
+[DEV]: Fscore: 0.8385
+[DD_test]: Fscore: 0.8113
+[IE_test]: Fscore: 0.6856
+[Train] Epoch 8: ECE loss: 0.134184, Fscore: 0.8749
+[DEV]: Fscore: 0.833
+[DD_test]: Fscore: 0.8056
+[IE_test]: Fscore: 0.6802
+[Train] Epoch 9: ECE loss: 0.118872, Fscore: 0.8919
+[DEV]: Fscore: 0.8391
+[DD_test]: Fscore: 0.8124
+[IE_test]: Fscore: 0.6863
+[Train] Epoch 10: ECE loss: 0.112075, Fscore: 0.8992
+[DEV]: Fscore: 0.8173
+[DD_test]: Fscore: 0.7984
+[IE_test]: Fscore: 0.6535
+[Train] Epoch 11: ECE loss: 0.105319, Fscore: 0.9065
+[DEV]: Fscore: 0.8291
+[DD_test]: Fscore: 0.8024
+[IE_test]: Fscore: 0.6784
+[Train] Epoch 12: ECE loss: 0.100676, Fscore: 0.9125
+[DEV]: Fscore: 0.8411
+[DD_test]: Fscore: 0.8037
+[IE_test]: Fscore: 0.6828
+[Train] Epoch 13: ECE loss: 0.093662, Fscore: 0.9173
+[DEV]: Fscore: 0.8252
+[DD_test]: Fscore: 0.8052
+[IE_test]: Fscore: 0.6606
+[Train] Epoch 14: ECE loss: 0.088785, Fscore: 0.9242
+[DEV]: Fscore: 0.8282
+[DD_test]: Fscore: 0.8076
+[IE_test]: Fscore: 0.6788
+[Train] Epoch 15: ECE loss: 0.081536, Fscore: 0.9302
+[DEV]: Fscore: 0.839
+[DD_test]: Fscore: 0.8056
+[IE_test]: Fscore: 0.6712
+[Train] Epoch 16: ECE loss: 0.075488, Fscore: 0.9367
+[DEV]: Fscore: 0.811
+[DD_test]: Fscore: 0.7896
+[IE_test]: Fscore: 0.645
+[Train] Epoch 17: ECE loss: 0.072233, Fscore: 0.9399
+[DEV]: Fscore: 0.8371
+[DD_test]: Fscore: 0.8018
+[IE_test]: Fscore: 0.6575
+[Train] Epoch 18: ECE loss: 0.067551, Fscore: 0.9427
+[DEV]: Fscore: 0.8283
+[DD_test]: Fscore: 0.7977
+[IE_test]: Fscore: 0.654
+[Train] Epoch 19: ECE loss: 0.067983, Fscore: 0.942
+[DEV]: Fscore: 0.8182
+[DD_test]: Fscore: 0.8017
+[IE_test]: Fscore: 0.643
+[Train] Epoch 20: ECE loss: 0.063483, Fscore: 0.9453
+[DEV]: Fscore: 0.8264
+[DD_test]: Fscore: 0.8046
+[IE_test]: Fscore: 0.6497
+
+
+[FINAL--DEV]: best_Fscore: 0.8529
+
+              precision    recall  f1-score   support
+
+         neg     0.9717    0.9659    0.9688    2842.0
+         pos     0.7188    0.7561    0.7370     328.0
+
+    accuracy                         0.9442    3170.0
+   macro avg     0.8453    0.8610    0.8529    3170.0
+weighted avg     0.9455    0.9442    0.9448    3170.0
+
+
+
+[FINAL--DD_test]: best_Fscore: 0.8219
+
+              precision    recall  f1-score   support
+
+         neg     0.9657    0.9496    0.9576   14052.0
+         pos     0.6462    0.7317    0.6863    1767.0
+
+    accuracy                         0.9253   15819.0
+   macro avg     0.8059    0.8407    0.8219   15819.0
+weighted avg     0.9300    0.9253    0.9273   15819.0
+
+
+
+[FINAL--IE_test]: best_Fscore: 0.7113
+
+              precision    recall  f1-score   support
+
+         neg     0.9649    0.9671    0.9660   16528.0
+         pos     0.4650    0.4482    0.4565    1053.0
+
+    accuracy                         0.9361   17581.0
+   macro avg     0.7150    0.7077    0.7113   17581.0
+weighted avg     0.9350    0.9361    0.9355   17581.0
+

@@ -33,23 +33,16 @@ class PAGE(nn.Module):
         self.affine2 = nn.Parameter(torch.Tensor(300,300))#1024
         self.drop = nn.Dropout(0.1)#有情感0.1，无情感0.4
         
-        # SpkGAT = []
-        # DisGAT = []
-        # for _ in range(2):
-        #     SpkGAT.append(RGAT(args, args.hidden_dim, args.hidden_dim, dropout=args.dropout, num_relation=6))
-        #     DisGAT.append(RGAT(args, args.hidden_dim, args.hidden_dim, dropout=args.dropout, num_relation=18))
 
-        # self.SpkGAT = nn.ModuleList(SpkGAT)
-        # self.DisGAT = nn.ModuleList(DisGAT)
-        # get_semantic_adj=get_semantic_adj(adj_index,max_len)
         self.emotion_embeddings = nn.Embedding(emo_emb.shape[0], emo_emb.shape[1], padding_idx=0, _weight=emo_emb)
         self.emotion_lin = nn.Linear(emo_emb.shape[1], emotion_dim)
         self.emotion_mapping = nn.Linear(utter_dim + emotion_dim, utter_dim)
     def forward(self, input_ids, attention_mask, mask, adj,label,adj_index):
         utter_emb = self.utter_encoder(input_ids, attention_mask,adj,label) 
         emo_emb = self.emotion_lin(self.emotion_embeddings(label))#torch.Size([x, x, 200])
-        utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
+        # utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
         utter_emb,rel_emb_k,rel_emb_v = self.pag(utter_emb,adj_index)
+        utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
         logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
         # logits = self.classifier1(utter_emb, 1, mask)
         return logits
@@ -68,11 +61,11 @@ class PAGE(nn.Module):
         emo_emb = emo_emb[:, :, :200]
         utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
 
-        utter_emb,rel_emb_k,rel_emb_v = self.pag(utter_emb)#utter_emb torch.Size([4, x, 300])
+        utter_emb,rel_emb_k,rel_emb_v = self.pag(utter_emb,adj_index)#utter_emb torch.Size([4, x, 300])
         utter_emb = self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
         
-        logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
-        
+        # logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
+        logits = self.classifier1(utter_emb, 1, mask)
         return logits
     def forward2(self, input_ids, attention_mask, mask, adj,label):
         utter_emb = self.utter_encoder(input_ids, attention_mask,adj,label) 

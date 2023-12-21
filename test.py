@@ -372,62 +372,60 @@ input = torch.randn(4,300,2)
 filter_size = 2
 output = cls_pooling(input, filter_size)
 print("CLSPooling结果:", output)
-
+"""
 #******************双视角门控网络结构*************************************
 #需要确保两个输入的第二个维度的大小是相同的（即两个视图在这一维度上具有相同的长度或特征数）。
-class DualViewGate(nn.Module):
-    def __init__(self, input_size1, input_size2, hidden_size):
-        super(DualViewGate, self).__init__()
-        self.fc1 = nn.Linear(input_size1, hidden_size)
-        self.fc2 = nn.Linear(input_size2, hidden_size)
-        self.gate = nn.Linear(hidden_size * 2, 1)
+# class DualViewGate(nn.Module):
+#     def __init__(self, input_size1, input_size2, hidden_size):
+#         super(DualViewGate, self).__init__()
+#         self.fc1 = nn.Linear(input_size1, hidden_size)
+#         self.fc2 = nn.Linear(input_size2, hidden_size)
+#         self.gate = nn.Linear(hidden_size * 2, 300)
 
-    def forward(self, x1, x2):
-        # Process input from view 1
-        out1 = F.relu(self.fc1(x1))
+#     def forward(self, x1, x2):
+#         # Process input from view 1
+#         out1 = F.relu(self.fc1(x1))# torch.Size([4, 20, 300])
 
-        # Process input from view 2
-        out2 = F.relu(self.fc2(x2))
+#         # Process input from view 2
+#         out2 = F.relu(self.fc2(x2))#torch.Size([4, 20, 300])
+#         # print("*************lin391",out1.shape,out2.shape)
+#         # Concatenate the processed views along the second dimension
+#         concatenated = torch.cat((out1, out2), dim=2)#torch.Size([4, 20, 600])
+#         # print("**********394",concatenated.shape)
+#         # Reshape the concatenated tensor to match the expected input for the gate
+#         concatenated = concatenated.view(concatenated.size(0), -1)#torch.Size([4, 12000])
+#         # print("**********397",concatenated.shape)
+#         # Compute gate values
+#         gate_values = torch.sigmoid(self.gate(concatenated))
+#         print("**********",gate_values.shape)
+#         # Expand gate_values to match the dimensions of the views
+#         gate_values = gate_values.unsqueeze(2).expand_as(out1)
+#         print("**********",gate_values.shape)
+#         # Apply gate values to the views
+#         gated_out1 = gate_values * out1
+#         gated_out2 = (1 - gate_values) * out2
 
-        # Concatenate the processed views along the second dimension
-        concatenated = torch.cat((out1, out2), dim=2)
+#         # Output the combination of gated views
+#         output = gated_out1 + gated_out2
 
-        # Reshape the concatenated tensor to match the expected input for the gate
-        concatenated = concatenated.view(concatenated.size(0), -1)
+#         return output
 
-        # Compute gate values
-        gate_values = torch.sigmoid(self.gate(concatenated))
+# # Example usage:
+# view1_size = 300
+# view2_size = 300
+# sequence_length = 20
+# hidden_size = 150
+# batch_size=4
+# # Create synthetic data
+# view1_data = torch.rand((batch_size, sequence_length, view1_size))
+# view2_data = torch.rand((batch_size, sequence_length, view2_size))
 
-        # Expand gate_values to match the dimensions of the views
-        gate_values = gate_values.unsqueeze(2).expand_as(out1)
-
-        # Apply gate values to the views
-        gated_out1 = gate_values * out1
-        gated_out2 = (1 - gate_values) * out2
-
-        # Output the combination of gated views
-        output = gated_out1 + gated_out2
-
-        return output
-
-# Example usage:
-view1_size = 10
-view2_size = 8
-sequence_length = 20
-hidden_size = 16
-
-# Create synthetic data
-view1_data = torch.rand((batch_size, sequence_length, view1_size))
-view2_data = torch.rand((batch_size, sequence_length, view2_size))
-
-dual_view_gate = DualViewGate(view1_size, view2_size, hidden_size)
-output = dual_view_gate(view1_data, view2_data)
-"""
+# dual_view_gate = DualViewGate(view1_size, view2_size, hidden_size)
+# output = dual_view_gate(view1_data, view2_data)
 
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
+
 #**********************************交叉注意力********************************
 # class CrossAttention(nn.Module):
 #     def __init__(self, input_size1, input_size2, hidden_size):
@@ -472,64 +470,132 @@ import torch.nn.functional as F
 
 
 #******************************多专家网络结构**************
+# import torch
+# import torch.nn as nn
+
+# class Expert(nn.Module):
+#     def __init__(self, input_dim, output_dim):
+#         super(Expert, self).__init__()
+#         self.linear = nn.Linear(input_dim, output_dim)
+
+#     def forward(self, x):
+#         return self.linear(x)
+
+# class MOEModel(nn.Module):
+#     def __init__(self, input_dim, expert_output_dim, gate_output_dim):
+#         super(MOEModel, self).__init__()
+
+#         # Define three experts (you can adjust the number of experts based on your needs)
+#         self.expert1 = Expert(input_dim, expert_output_dim)
+#         self.expert2 = Expert(input_dim, expert_output_dim)
+#         self.expert3 = Expert(input_dim, expert_output_dim)
+
+#         # Define the gate network
+#         self.gate_network = nn.Sequential(
+#             nn.Linear(3 * expert_output_dim, gate_output_dim),
+#             nn.Softmax(dim=-1)
+#         )
+
+#     def forward(self, input_tensor):
+#         # Forward pass through each expert
+#         output1 = self.expert1(input_tensor)
+#         output2 = self.expert2(input_tensor)
+#         output3 = self.expert3(input_tensor)
+
+#         # Concatenate expert outputs along the last dimension
+#         expert_outputs = torch.cat([output1, output2, output3], dim=-1)
+
+#         # Calculate gate weights
+#         gate_weights = self.gate_network(expert_outputs)
+
+#         # Weighted sum of expert outputs based on gate weights
+#         final_output = torch.sum(expert_outputs * gate_weights, dim=-1)
+
+#         return final_output
+
+# # Example usage
+# input_dim = 200
+# expert_output_dim = 200
+# gate_output_dim = 600
+
+# # Create an instance of the MOEModel
+# moe_model = MOEModel(input_dim, expert_output_dim, gate_output_dim)
+
+# # Generate example input tensor
+# input_tensor = torch.randn(4, 8, input_dim)  # Example input with shape (batch_size, sequence_length, input_dim)
+
+# # Forward pass through the MOE model
+# output_tensor = moe_model(input_tensor)
+
+# print("Output shape:", output_tensor.shape)
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-class Expert(nn.Module):
-    def __init__(self, input_dim, expert_dim, output_dim):
-        super(Expert, self).__init__()
-        self.fc1 = nn.Linear(input_dim, expert_dim)
-        self.fc2 = nn.Linear(expert_dim, output_dim)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-class Gate(nn.Module):
-    def __init__(self, input_dim, num_experts):
-        super(Gate, self).__init__()
-        self.fc = nn.Linear(input_dim, num_experts)
+class TemporalBlock1(nn.Module):
+    def __init__(self, input_size, output_size, kernel_size, stride, dilation):
+        super(TemporalBlock, self).__init__()
+        padding = int((kernel_size - 1) * (dilation - 1) / 2)
+        self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
+        self.relu = nn.ReLU()
 
     def forward(self, x):
-        return F.softmax(self.fc(x), dim=-1)
+        return self.relu(self.conv(x))
+class TemporalBlock(nn.Module):
+    def __init__(self, input_size, output_size, kernel_size, stride, dilation):
+        super(TemporalBlock, self).__init__()
+        padding = int((kernel_size - 1) * (dilation - 1) / 2)
+        self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
+        self.relu = nn.ReLU()
+    def forward(self, x):
+        return self.relu(self.conv(x))
+class BiTemporalConvNet(nn.Module):
+    def __init__(self, input_size, output_size, num_blocks, kernel_size, stride, dilation):
+        super(BiTemporalConvNet, self).__init__()
 
-class MixtureOfExperts(nn.Module):
-    def __init__(self, input_dim, expert_dim, num_experts, output_dim):
-        super(MixtureOfExperts, self).__init__()
+        self.forward_blocks = nn.ModuleList()
+        self.backward_blocks = nn.ModuleList()
 
-        # Create expert modules
-        self.experts = nn.ModuleList([Expert(input_dim, expert_dim, output_dim) for _ in range(num_experts)])
-
-        # Create gate module
-        self.gate = Gate(input_dim, num_experts)
+        for i in range(num_blocks):
+            self.forward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
+            self.backward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
 
     def forward(self, x):
-        # Compute expert outputs
-        expert_outputs = [expert(x) for expert in self.experts]
+        # Forward pass
+        forward_output = x
+        for block in self.forward_blocks:
+            forward_output = block(forward_output)
 
-        # Compute gate weights
-        gate_weights = self.gate(x)
+        # Backward pass
+        backward_output = x.flip(dims=[2])  # Reverse the input along the time dimension
+        for block in self.backward_blocks:
+            backward_output = block(backward_output)
 
-        # Combine expert outputs using gate weights
-        mixed_output = sum(weight * expert_output for weight, expert_output in zip(gate_weights.t(), expert_outputs))
+        backward_output = backward_output.flip(dims=[2])  # Reverse the output along the time dimension
 
-        return mixed_output, gate_weights
+        # Concatenate forward and backward outputs
+        output = torch.cat([forward_output, backward_output], dim=2)
 
-# 示例用法
-input_dim = 3  # 三个维度的输入
-expert_dim = 20
-num_experts = 5
-output_dim = 3  # 三个维度的输出
+        return output
 
-model = MixtureOfExperts(input_dim, expert_dim, num_experts, output_dim)
+# Example usage
+input_size = 10
+output_size = 16
+num_blocks = 3
+kernel_size = 3
+stride = 1
+dilation = 2
 
-# 输入数据（假设输入数据是三维的）
-input_data = torch.randn(32, input_dim)
+# Create synthetic data
+sequence_length =300
+batch_size = 4
+input_data = torch.randn(batch_size, input_size, sequence_length)
 
-# 模型前向传播
-output, gate_weights = model(input_data)
+# Build Bi-TCN model
+bi_tcn_model = BiTemporalConvNet(input_size, output_size, num_blocks, kernel_size, stride, dilation)
 
-print("Output shape:", output.shape)
-print("Gate weights shape:", gate_weights.shape)
+# Forward pass
+output_data = bi_tcn_model(input_data)
+
+print("Input shape:", input_data.shape)
+print("Output shape:", output_data.shape)
