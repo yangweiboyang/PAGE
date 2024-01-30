@@ -36,7 +36,7 @@ def train(model, model_path, train_loader, dev_loader, dd_loader, ie_loader,
 
         for data in train_loader:
       
-            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, _ = data
+            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, act= data
 
             mask = mask.cuda()
             label = label.cuda()
@@ -50,7 +50,7 @@ def train(model, model_path, train_loader, dev_loader, dd_loader, ie_loader,
             rel_adj = mask.clone()
             rel_adj = rel_adj.long().cuda()
                       
-            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index)
+            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index,act)
             
             ece_label_list.append(torch.flatten(ece_pair.data).cpu().numpy())
             ece_prediction_mask.append(torch.flatten(mask.data).cpu().numpy())
@@ -130,7 +130,7 @@ def valid(valid_type, model, data_loader, log):
     with torch.no_grad():
         for data in data_loader:
 
-            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, _  = data
+            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, act = data
 
             attention_mask = [t.cuda() for t in attention_mask]
             mask = mask.cuda()
@@ -143,7 +143,7 @@ def valid(valid_type, model, data_loader, log):
             rel_adj = mask.clone()
             rel_adj = rel_adj.long().cuda()
             
-            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index)
+            prediction = model(input_ids, attention_mask, mask, adj,label+1,adj_index,act)
 
             ece_prediction = torch.flatten(torch.gt(prediction.data, 0.5).long()).cpu().numpy()
             ece_prediction_list.append(ece_prediction)
@@ -218,8 +218,7 @@ def main(args, seed=0, index=0):
     emotion_dim = args.emotion_dim
     
     for data in train_loader:
-      
-            input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, _ = data
+        input_ids, attention_mask, clen, mask, adj_index, label, ece_pair, act= data
     
     nhead = args.nhead
     ff_dim = args.ff_dim
@@ -229,7 +228,7 @@ def main(args, seed=0, index=0):
     num_bases = args.num_bases
 
     emo_emb = pickle.load(open('emotion_embeddings.pkl', 'rb'), encoding='latin1')
-    model = PAGE(utter_dim,emo_emb,emotion_dim,att_dropout,mlp_dropout,pag_dropout,ff_dim,nhead,window,num_bases,max_len,posi_dim)
+    model = PAGE(utter_dim,emo_emb,emotion_dim,att_dropout,mlp_dropout,pag_dropout,ff_dim,nhead,window,num_bases,max_len,posi_dim,act)
 
     loss_fn = MaskedBCELoss2()
       
@@ -258,9 +257,9 @@ def main(args, seed=0, index=0):
 if __name__ == '__main__': 
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_list', type=str, required=False, default='0')  
-    parser.add_argument('--n_epochs', type=int, required=False, default=20)
+    parser.add_argument('--n_epochs', type=int, required=False, default=10)
     parser.add_argument('--batch_size', type=int, required=False, default=4)#4
-    parser.add_argument('--accumulate_step', type=int, required=False, default=1)
+    parser.add_argument('--accumulate_step', type=int, required=False, default=1)#1
     parser.add_argument('--lr', type=float, required=False, default=3e-5)
     parser.add_argument('--weight_decay', type=float, required=False, default=1e-3)
     parser.add_argument('--model_size', type=str, required=False, default='base')
@@ -268,13 +267,13 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler', type=str, required=False, default='constant')
     parser.add_argument('--warmup_rate', type=float, required=False, default=0.1)
     parser.add_argument('--emotion_dim', type=int, required=False, default=200)
-    parser.add_argument('--window', type=int, required=False, default=3)#2
+    parser.add_argument('--window', type=int, required=False, default=1)#2
     parser.add_argument('--max_len', type=int, required=False, default=10)
     parser.add_argument('--posi_dim', type=int, required=False, default=100)
     parser.add_argument('--pag_dropout', required=False, type=float, default=0.1)
-    parser.add_argument('--att_dropout', required=False, type=float, default=0.1)
+    parser.add_argument('--att_dropout', required=False, type=float, default=0.1)#0.1
     parser.add_argument('--mlp_dropout', type=float, required=False, default=0.1)
-    parser.add_argument('--nhead', required=False, type=int, default=6)
+    parser.add_argument('--nhead', required=False, type=int, default=6)#6
     parser.add_argument('--ff_dim', required=False, type=int, default=128)
     parser.add_argument('--utter_dim', type=int, required=False, default=300)
     parser.add_argument('--num_bases', type=int, required=False, default=2)

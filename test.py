@@ -528,74 +528,300 @@ print("CLSPooling结果:", output)
 # output_tensor = moe_model(input_tensor)
 
 # print("Output shape:", output_tensor.shape)
+#********************************************************TCN网络结构**********************************
+# import torch
+# import torch.nn as nn
 
-import torch
-import torch.nn as nn
+# class TemporalBlock1(nn.Module):
+#     def __init__(self, input_size, output_size, kernel_size, stride, dilation):
+#         super(TemporalBlock, self).__init__()
+#         padding = int((kernel_size - 1) * (dilation - 1) / 2)
+#         self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
+#         self.relu = nn.ReLU()
 
-class TemporalBlock1(nn.Module):
-    def __init__(self, input_size, output_size, kernel_size, stride, dilation):
-        super(TemporalBlock, self).__init__()
-        padding = int((kernel_size - 1) * (dilation - 1) / 2)
-        self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
-        self.relu = nn.ReLU()
+#     def forward(self, x):
+#         return self.relu(self.conv(x))
+# class TemporalBlock(nn.Module):
+#     def __init__(self, input_size, output_size, kernel_size, stride, dilation):
+#         super(TemporalBlock, self).__init__()
+#         padding = int((kernel_size - 1) * (dilation - 1) / 2)
+#         self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
+#         self.relu = nn.ReLU()
+#     def forward(self, x):
+#         return self.relu(self.conv(x))
+# class BiTemporalConvNet(nn.Module):
+#     def __init__(self, input_size, output_size, num_blocks, kernel_size, stride, dilation):
+#         super(BiTemporalConvNet, self).__init__()
 
-    def forward(self, x):
-        return self.relu(self.conv(x))
-class TemporalBlock(nn.Module):
-    def __init__(self, input_size, output_size, kernel_size, stride, dilation):
-        super(TemporalBlock, self).__init__()
-        padding = int((kernel_size - 1) * (dilation - 1) / 2)
-        self.conv = nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding, dilation=dilation)
-        self.relu = nn.ReLU()
-    def forward(self, x):
-        return self.relu(self.conv(x))
-class BiTemporalConvNet(nn.Module):
-    def __init__(self, input_size, output_size, num_blocks, kernel_size, stride, dilation):
-        super(BiTemporalConvNet, self).__init__()
+#         self.forward_blocks = nn.ModuleList()
+#         self.backward_blocks = nn.ModuleList()
 
-        self.forward_blocks = nn.ModuleList()
-        self.backward_blocks = nn.ModuleList()
+#         for i in range(num_blocks):
+#             self.forward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
+#             self.backward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
 
-        for i in range(num_blocks):
-            self.forward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
-            self.backward_blocks.append(TemporalBlock(input_size, output_size, kernel_size, stride, dilation))
+#     def forward(self, x):
+#         # Forward pass
+#         forward_output = x
+#         for block in self.forward_blocks:
+#             forward_output = block(forward_output)
 
-    def forward(self, x):
-        # Forward pass
-        forward_output = x
-        for block in self.forward_blocks:
-            forward_output = block(forward_output)
+#         # Backward pass
+#         backward_output = x.flip(dims=[2])  # Reverse the input along the time dimension
+#         for block in self.backward_blocks:
+#             backward_output = block(backward_output)
 
-        # Backward pass
-        backward_output = x.flip(dims=[2])  # Reverse the input along the time dimension
-        for block in self.backward_blocks:
-            backward_output = block(backward_output)
+#         backward_output = backward_output.flip(dims=[2])  # Reverse the output along the time dimension
 
-        backward_output = backward_output.flip(dims=[2])  # Reverse the output along the time dimension
+#         # Concatenate forward and backward outputs
+#         output = torch.cat([forward_output, backward_output], dim=2)
 
-        # Concatenate forward and backward outputs
-        output = torch.cat([forward_output, backward_output], dim=2)
+#         return output
 
-        return output
+# # Example usage
+# input_size = 10
+# output_size = 16
+# num_blocks = 3
+# kernel_size = 3
+# stride = 1
+# dilation = 2
 
-# Example usage
-input_size = 10
-output_size = 16
-num_blocks = 3
-kernel_size = 3
-stride = 1
-dilation = 2
+# # Create synthetic data
+# sequence_length =300
+# batch_size = 4
+# input_data = torch.randn(batch_size, input_size, sequence_length)
 
-# Create synthetic data
-sequence_length =300
-batch_size = 4
-input_data = torch.randn(batch_size, input_size, sequence_length)
+# # Build Bi-TCN model
+# bi_tcn_model = BiTemporalConvNet(input_size, output_size, num_blocks, kernel_size, stride, dilation)
 
-# Build Bi-TCN model
-bi_tcn_model = BiTemporalConvNet(input_size, output_size, num_blocks, kernel_size, stride, dilation)
+# # Forward pass
+# output_data = bi_tcn_model(input_data)
 
-# Forward pass
-output_data = bi_tcn_model(input_data)
+# print("Input shape:", input_data.shape)
+# print("Output shape:", output_data.shape)
 
-print("Input shape:", input_data.shape)
-print("Output shape:", output_data.shape)
+
+# import torch
+# import torch.nn as nn
+
+# class CrossAttentionLayer(nn.Module):
+#     def __init__(self, query_dim, key_dim, value_dim, num_heads=1, dropout_rate=0):
+#         super(CrossAttentionLayer, self).__init__()
+
+#         self.num_heads = num_heads
+#         self.dropout_rate = dropout_rate
+
+#         # Linear projections for queries, keys, and values
+#         self.query_proj = nn.Linear(query_dim, query_dim)
+#         self.key_proj = nn.Linear(key_dim, key_dim)
+#         self.value_proj = nn.Linear(value_dim, value_dim)
+
+#         # Multi-head linear projection
+#         self.linear_out = nn.Linear(value_dim, value_dim)
+
+#         # Dropout layer
+#         self.dropout = nn.Dropout(p=self.dropout_rate)
+
+#     def forward(self, queries, keys, values):
+#         # Linear projections
+#         Q = self.query_proj(queries)  # [bs, query_len, query_dim]
+#         K = self.key_proj(keys)  # [bs, key_len, key_dim]
+#         V = self.value_proj(values)  # [bs, value_len, value_dim]
+
+#         # Split and concat for multi-head attention
+#         Q_ = torch.cat(torch.chunk(Q, self.num_heads, dim=2), dim=0)  # (h*bs, query_len, query_dim/h)
+#         K_ = torch.cat(torch.chunk(K, self.num_heads, dim=2), dim=0)  # (h*bs, key_len, key_dim/h)
+#         V_ = torch.cat(torch.chunk(V, self.num_heads, dim=2), dim=0)  # (h*bs, value_len, value_dim/h)
+
+#         # Calculate attention scores
+#         attention_scores = torch.bmm(Q_, K_.permute(0, 2, 1))  # (h*bs, query_len, key_len)
+#         attention_scores = attention_scores / (K_.size()[-1] ** 0.5)  # Scale
+
+#         # Softmax to get attention weights
+#         attention_weights = torch.nn.functional.softmax(attention_scores, dim=-1)
+
+#         # Apply dropout
+#         attention_weights = self.dropout(attention_weights)
+
+#         # Weighted sum using attention weights
+#         output = torch.bmm(attention_weights, V_)  # (h*bs, query_len, value_dim/h)
+
+#         # Concatenate and project back to original dimension
+#         output = torch.cat(torch.chunk(output, self.num_heads, dim=0), dim=2)  # (bs, query_len, value_dim)
+#         output = self.linear_out(output)  # Linear projection
+
+#         return output
+
+# # Example usage
+# query_dim = 256
+# key_dim = 256
+# value_dim = 256
+# num_heads = 4
+
+# cross_attention_layer = CrossAttentionLayer(query_dim, key_dim, value_dim, num_heads)
+
+# # Example input shapes
+# queries = torch.rand((32, 10, query_dim))  # Batch size: 32, Sequence length: 10
+# keys = torch.rand((32, 15, key_dim))  # Batch size: 32, Sequence length: 15
+# values = torch.rand((32, 15, value_dim))  # Batch size: 32, Sequence length: 15
+
+# # Forward pass
+# output = cross_attention_layer(queries, keys, values)
+
+# print("Output shape:", output.shape)
+
+
+# import torch
+# import torch.nn as nn
+
+# class BiLSTM(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+#         super(BiLSTM, self).__init__()
+#         self.hidden_dim = hidden_dim
+#         self.num_layers = num_layers
+#         self.bilstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, bidirectional=True)
+#         self.fc = nn.Linear(hidden_dim * 2, output_dim)  # 乘以2是因为双向LSTM会将正向和逆向的隐藏状态拼接在一起
+#         self.w_omiga = torch.randn(input_dim,2*hidden_dim,1,requires_grad=True)#batchsize=4
+#     def forward(self, x):
+#         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_dim).to(x.device)  # 初始化正向和逆向的隐藏状态
+#         c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_dim).to(x.device)  # 初始化正向和逆向的细胞状态
+
+#         out, _ = self.bilstm(x, (h0, c0))  # 获取双向LSTM的输出
+#         # print("**********lin81 out",out.shape)#torch.Size([4, 11, 1536])
+#         H = torch.nn.Tanh()(out)
+#         self.w_omiga = torch.randn(H.shape[0],2*self.hidden_dim,1,requires_grad=True).to(x.device)
+#         # self.w_omiga=self.w_omiga
+#         weights = torch.nn.Softmax(dim=-1)(torch.bmm(H,self.w_omiga).squeeze()).unsqueeze(dim=-1).repeat(1,1,self.hidden_dim * 2)
+#         # print("*******lin85 weights",weights.shape)#torch.Size([4, 11, 1536])
+#         out = torch.mul(out,weights)
+#         # print("************lin86 out.shape ",out.shape)#torch.Size([4, 11, 1536])
+#         out = self.fc(out[:, :, :])  # 取最后一个时间步的输出作为模型的输出
+        
+        
+#         return out
+
+# input_size=10
+# hidden_size=300
+# num_layers=10
+# output_size=2
+# # Create BiLSTM model
+# bilstm=BiLSTM(input_size, hidden_size, num_layers, output_size)
+
+# # Example input sequence (batch_size=32, sequence_length=20)
+# input_sequence = torch.randn(4,10,10)
+
+# # Forward pass
+# output = bilstm(input_sequence)
+# print(output.shape)
+
+
+# import dgl
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# from dgl.nn import HeteroGraphConv
+# import numpy as np
+
+# class HeterogeneousGraphConvolution(nn.Module):
+#     def __init__(self, in_feats, out_feats, rel_names):
+#         super(HeterogeneousGraphConvolution, self).__init__()
+#         self.conv = HeteroGraphConv({rel: nn.Linear(in_feats, out_feats) for rel in rel_names})
+        
+#     def forward(self, graph, inputs):
+#         return self.conv(graph, inputs)
+
+# class HeterogeneousTensorFusion(nn.Module):
+#     def __init__(self, num_node_types, input_dims, hidden_dim):
+#         super(HeterogeneousTensorFusion, self).__init__()
+#         self.embeddings = nn.ModuleList([nn.Linear(input_dim, hidden_dim) for input_dim in input_dims])
+#         self.conv = HeterogeneousGraphConvolution(hidden_dim, hidden_dim, graph.etypes)
+#         self.fc = nn.Linear(hidden_dim, 1)
+        
+#     def forward(self, graph, input_data):
+#         print("*************lin740",input_data.shape)
+#         node_embeds = [embedding(data) for embedding, data in zip(self.embeddings, input_data)]
+#         node_embeds = {f'node_type_{i}': embed for i, embed in enumerate(node_embeds)}
+#         h = self.conv(graph, node_embeds)
+#         h = F.relu(h['node'])
+#         h = dgl.mean_nodes(graph, h)
+#         return self.fc(h)
+
+# # 创建异构图
+# graph = dgl.heterograph({
+#     ('node_type_0', 'edge_type_0', 'node_type_1'): (torch.tensor([0, 1]), torch.tensor([1, 2])),
+#     ('node_type_1', 'edge_type_1', 'node_type_2'): (torch.tensor([2, 3]), torch.tensor([3, 4]))
+# })
+
+# # 创建三个不同类型的三维张量
+# tensor_data_0 = torch.randn(2, 3, 4)  # 2 nodes of type 0, each with a 3x4 tensor
+# tensor_data_1 = torch.randn(3, 3, 4)  # 3 nodes of type 1, each with a 3x4 tensor
+# tensor_data_2 = torch.randn(2, 3, 4)  # 2 nodes of type 2, each with a 3x4 tensor
+
+# # 将三维张量转换成节点特征矩阵
+# node_data_0 = tensor_data_0.view(tensor_data_0.size(0), -1)
+# node_data_1 = tensor_data_1.view(tensor_data_1.size(0), -1)
+# node_data_2 = tensor_data_2.view(tensor_data_2.size(0), -1)
+
+# # 构建异构图融合模型
+# fusion_model = HeterogeneousTensorFusion(num_node_types=3, input_dims=[tensor_data_0.size(1), tensor_data_1.size(1), tensor_data_2.size(1)], hidden_dim=64)
+
+# # 模型前向传播
+# logits = fusion_model(graph, [node_data_0, node_data_1, node_data_2])
+
+
+
+
+
+class DAGCN(nn.Module):
+    """
+    DAGCN module operated on graph
+    """
+
+    def __init__(self):
+        super(DAGCN, self).__init__()
+        # self.args = args
+        self.in_dim = 768
+        self.num_layers = 8
+        # self.dropout = nn.Dropout(args.dropout)
+
+        self.proj = nn.Linear(self.in_dim, 1)
+
+    def conv_l2(self):
+        conv_weights = []
+        for w in self.W:
+            conv_weights += [w.weight, w.bias]
+        return sum([x.pow(2).sum() for x in conv_weights])
+
+    def forward(self, feature, graph_adj):
+        B = graph_adj.size(0) # 批大小
+
+        preds = [] # eq8里的H
+        preds.append(feature) # 存Z
+
+        for l in range(self.num_layers):
+            denom = torch.diag_embed(graph_adj.sum(2))  # 度矩阵D
+            deg_inv_sqrt = denom.pow(-0.5) # D 的-1/2次方
+            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+            deg_inv_sqrt = deg_inv_sqrt.detach()
+            adj_ = deg_inv_sqrt.bmm(graph_adj) # D 的-1/2次方 * A
+            adj_ = adj_.bmm(deg_inv_sqrt) # (D 的-1/2次方 * A * D 的-1/2次方) 即 A_l
+
+            feature = adj_.transpose(-1, -2).bmm(feature) # eq8里的 H_l
+            preds.append(feature) # 存到 H里
+        #
+        pps = torch.stack(preds, dim=2)  # (B, N, L+1, D)  H
+        retain_score = self.proj(pps)  # (B, N, L+1, 1)
+        retain_score0 = torch.sigmoid(retain_score).view(-1, self.num_layers + 1, 1)  # (B*N, L+1, 1) eq8里的 S
+
+        retain_score = retain_score0.transpose(-1, -2)  # (B* N, 1, L+1) eq8里的 S ~
+        out = retain_score.bmm(
+            pps.view(-1, self.num_layers + 1, self.in_dim))  # (B*N, 1, L+1) * (B*N, L+1, D) = (B* N, 1, D)
+        out = out.squeeze(1).view(B, -1, self.in_dim)  # (B, N, D) eq8里的 X_out
+
+        return out # 返回图中节点的表示
+    
+s=DAGCN()##torch.Size([4, 330/x, 768]) torch.Size([4, 330/x, 330/x]),输出torch.Size([4, 330/x, 768]) 
+f=torch.randn(4,300,768)
+f2=torch.randn(4, 300, 300)
+s1=s(f,f2)
+print("********",s1.shape)

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model import Causal_Classifier,PaG,CausePredictor
+from model import Causal_Classifier,PaG,CausePredictor,EmotionAttentionLayer
 from encoder import UtterEncoder
 
 
@@ -20,7 +20,7 @@ class PAGE(nn.Module):
                  num_bases,
                  max_len,
                  posi_dim,
-                
+                 act
                         ):
         super(PAGE, self).__init__()
         self.utter_encoder = UtterEncoder(utter_dim, emo_emb,emotion_dim,att_dropout,mlp_dropout,pag_dropout,ff_dim,nhead)
@@ -31,22 +31,30 @@ class PAGE(nn.Module):
         self.layers = 3
         self.affine1 = nn.Parameter(torch.Tensor(300,300))#1024
         self.affine2 = nn.Parameter(torch.Tensor(300,300))#1024
-        self.drop = nn.Dropout(0.1)#有情感0.1，无情感0.4
-        
+        self.drop = nn.Dropout(0.2)#有情感0.1，无情感0.4
+        self.emotionatt=EmotionAttentionLayer(768,8,0.1)
 
         self.emotion_embeddings = nn.Embedding(emo_emb.shape[0], emo_emb.shape[1], padding_idx=0, _weight=emo_emb)
         self.emotion_lin = nn.Linear(emo_emb.shape[1], emotion_dim)
         self.emotion_mapping = nn.Linear(utter_dim + emotion_dim, utter_dim)
-    def forward(self, input_ids, attention_mask, mask, adj,label,adj_index):
+        self.act=act
+    def forward(self, input_ids, attention_mask, mask, adj,label,adj_index,act):
         utter_emb = self.utter_encoder(input_ids, attention_mask,adj,label) 
+        act=self.act#torch.Size([2, 11])
+        # print("*******************lin44 act",label.shape) label形状：torch.Size([一般是4或者x, x])
         emo_emb = self.emotion_lin(self.emotion_embeddings(label))#torch.Size([x, x, 200])
         # utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
+        print("*********************lin45",utter_emb.shape)
         utter_emb,rel_emb_k,rel_emb_v = self.pag(utter_emb,adj_index)
+        
+        print("*********************lin45",utter_emb.shape)
+        # emo_emb=self.emotionatt(emo_emb,emo_emb,emo_emb)
+
         utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
         logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
         # logits = self.classifier1(utter_emb, 1, mask)
         return logits
-    def forward1(self, input_ids, attention_mask, mask, adj,label,adj_index):
+    def forward1(self, input_ids, attention_mask, mask, adj,label,adj_index,act):
         utter_emb = self.utter_encoder(input_ids, attention_mask,adj,label) 
         emo_emb = self.emotion_lin(self.emotion_embeddings(label))#torch.Size([x, x, 200])        
         # utter_emb = self.emotion_mapping(torch.cat([utter_emb, emo_emb], dim=-1))#torch.Size([4, x, 300])，这行可有可无
@@ -58,14 +66,17 @@ class PAGE(nn.Module):
         emo_emb = torch.bmm(A1, utter_emb)
         utter_emb = torch.bmm(A2, emo_emb)
 
+        emo_emb=self.drop(emo_emb)
+        utter_emb=self.drop(utter_emb)
+        
         emo_emb = emo_emb[:, :, :200]
         utter_emb=self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
 
         utter_emb,rel_emb_k,rel_emb_v = self.pag(utter_emb,adj_index)#utter_emb torch.Size([4, x, 300])
-        utter_emb = self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
+        # utter_emb = self.emotion_mapping(torch.cat([utter_emb,emo_emb],dim=-1))
         
-        # logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
-        logits = self.classifier1(utter_emb, 1, mask)
+        logits = self.classifier(utter_emb,rel_emb_k,rel_emb_v,mask)
+        # logits = self.classifier1(utter_emb, 1, mask)
         return logits
     def forward2(self, input_ids, attention_mask, mask, adj,label):
         utter_emb = self.utter_encoder(input_ids, attention_mask,adj,label) 

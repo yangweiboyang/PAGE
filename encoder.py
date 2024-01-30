@@ -30,23 +30,24 @@ class UtterEncoder(nn.Module):
         processed_output = []
         for cutt, amsk in zip(conv_utterance, attention_mask):
             output_data = self.encoder(cutt, attention_mask=amsk).last_hidden_state  
+            # print("*************line33",output_data.shape) torch.Size([x, x, 768])
             output_data  = self.tcn_net(output_data.permute(0,2,1))
-            #output_data形状：([5, 27, 768])只有768是定值.
-            output_data =output_data.permute(0,2,1)
-            
+            # # #output_data形状：([5, 27, 768])只有768是定值.
+            output_data =output_data.permute(0,2,1)#形状同：output_data
+            # print("*************line37 tcn",output_data.shape)
             pooler_output = torch.max(output_data, dim=1)[0]  
             mapped_output = self.mapping(pooler_output)  
             processed_output.append(mapped_output)
 
-        conv_output = pad_sequence(processed_output, batch_first=True)   
+        conv_output = pad_sequence(processed_output, batch_first=True)#torch.Size([6或者x, x, 300])  
         emo_emb = self.emotion_lin(self.emotion_embeddings(emotion_label))
-        utter_emb = self.emotion_mapping(torch.cat([conv_output, emo_emb], dim=-1))
+        utter_emb = self.emotion_mapping(torch.cat([conv_output, emo_emb], dim=-1))#跟conv_output形状一样
         
         x = utter_emb.transpose(0,1)
-        x2 = self.attention(x, adj)
-        ss = x.transpose(0,1) + self.dropout(x2)
-        ss = self.norm(ss)
-        out = self.mlp(ss)
+        x2 = self.attention(x, adj)#跟conv_output形状一样
+        ss = x.transpose(0,1) + self.dropout(x2)#跟conv_output形状一样
+        ss = self.norm(ss)#跟conv_output形状一样
+        out = self.mlp(ss)#跟conv_output形状一样
 
         return out  
 

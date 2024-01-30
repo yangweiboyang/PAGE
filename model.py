@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn.conv.rgcn_conv import RGCNConv
-
+import torch.nn.functional as F
 
     
 class PaG(nn.Module):
@@ -9,16 +9,21 @@ class PaG(nn.Module):
         super(PaG, self).__init__()
         self.max_len = max_len
         self.posi_dim = posi_dim
-       
+        input_size=10
+        hidden_size=300
+        num_layers=10
+        output_size=2
         self.pe_k = nn.Embedding(max_len+1, posi_dim, padding_idx=0)
         self.pe_v = nn.Embedding(max_len+1, posi_dim, padding_idx=0)
         self.window = window
         self.rel_num = self.window + 2
         self.rgcn = RGCNConv(utter_dim,utter_dim,self.rel_num,num_bases=num_bases)
-
+        self.bilstm=BiLSTM(input_size, hidden_size, num_layers, output_size)
     
     def forward(self,x,adj_index):
-        batch_size = x.shape[0]
+        # print("******lin24",x.shape,x)
+        # mm=x
+        batch_size = x.shape[0]#x的形状torch.Size([bc, x, 300])
         x_dim = x.shape[2]
         slen = x.shape[1]
         src_pos = torch.arange(slen).unsqueeze(0)
@@ -45,9 +50,17 @@ class PaG(nn.Module):
         out = self.rgcn(x[0],index,edge_type).unsqueeze(0)
         for i in range(1,batch_size):
             h = self.rgcn(x[i],index,edge_type)
-            out = torch.cat((out,h.unsqueeze(0)),dim=0)
-        spkear=get_semantic_adj(adj_index,self.max_len ) #说话人信息  
+            out = torch.cat((out,h.unsqueeze(0)),dim=0)#形状跟x相同
+        # print("********************lin53",out.shape)    
+        # outp=mm    #adj_index.shape  adj_index torch.Size([4, 2, 15, 15])后两位一样
+        # print("******************lin56 adj_index",adj_index.shape)
+        spkear=get_semantic_adj(adj_index,self.max_len ) #说话人信息  [x,10,10]
+        # print("**************lin53",spkear)
+        spkear = spkear.to(torch.float)
         spkear=spkear.to(x.device) 
+        spkear=self.bilstm(spkear)
+        print("*************lin50 speaker",spkear.shape)
+        
         m2=out.shape[1]
         spkear= spkear[:,:m2,:]
         tensor_fixed=torch.randn(out.shape[0],out.shape[1],out.shape[2])
@@ -58,16 +71,101 @@ class PaG(nn.Module):
             padding_size = m2 - spkear.shape[1]
             padding_values = torch.randn(spkear.shape[0],padding_size, spkear.shape[2])
             padding_values=padding_values.to(x.device)
-            tensor_fixed = torch.cat([spkear, padding_values], dim=1)
+            tensor_fixed = torch.cat([spkear, padding_values], dim=1)#torch.Size([4, x, 10]
         # print("**********************lin50 spkear.shape,out.shape,adj_index.shape",spkear.shape,out.shape,adj_index.shape)
         #torch.Size([1, 10, 10])后面两个维度确定 torch.Size([1, 8, 300])最后一位300确定，第二维小于或者大于10
         #torch.Size([4, 10, 10]) torch.Size([4, 11, 300]) torch.Size([4, 2, 11, 11])第二位2是确定的，第三位和前面第二位一样
-
-        out=torch.cat([out,tensor_fixed],dim=2)
+        
+        out=torch.cat([out,tensor_fixed],dim=2)#torch.Size([4, x, 310])
         
         out=out[:,:,:300]
         return out,rel_emb_k,rel_emb_v
 
+class EmotionAttentionLayer(nn.Module):
+
+    def __init__(self, num_units, num_heads=1, dropout_rate=0):
+        '''Applies multihead attention.
+        Args:
+            num_units: A scalar. Attention size.
+            dropout_rate: A floating point number.
+            num_heads: An int. Number of heads.
+        '''
+        super(EmotionAttentionLayer, self).__init__()
+
+        self.num_units = num_units
+        self.num_heads = num_heads
+        self.dropout_rate = dropout_rate
+
+        self.Q_proj = nn.Sequential(nn.Linear(self.num_units, self.num_units), nn.ReLU())
+        self.K_proj = nn.Sequential(nn.Linear(self.num_units, self.num_units), nn.ReLU())
+        self.V_proj = nn.Sequential(nn.Linear(self.num_units, self.num_units), nn.ReLU())
+
+
+        self.output_dropout = nn.Dropout(p=self.dropout_rate)
+
+    def forward(self, queries, keys, values,last_layer = False):
+        # keys, values: same shape of [bs, emo_num, feat_dim]
+        # queries: A 3d Variable with shape of [bs,curr_max_win_len, feat_dim]
+        # Linear projections
+        Q = self.Q_proj(queries)  # [bs,curr_max_win_len, feat_dim]
+        K = self.K_proj(keys)  # [bs, emo_num, feat_dim]
+        V = self.V_proj(values)  # [bs, emo_num, feat_dim]
+        # Split and concat
+        Q_ = torch.cat(torch.chunk(Q, self.num_heads, dim=2), dim=0)  # (h*bs, curr_max_win_len, feat_dim/h)
+        K_ = torch.cat(torch.chunk(K, self.num_heads, dim=2), dim=0)  # (h*bs, emo_num, feat_dim/h)
+        V_ = torch.cat(torch.chunk(V, self.num_heads, dim=2), dim=0)  # (h*bs, emo_num, feat_dim/h)
+        # Multiplication
+        outputs = torch.bmm(Q_, K_.permute(0, 2, 1))  # (h*bs, curr_max_win_len, emo_num)
+        # Scale
+        outputs = outputs / (K_.size()[-1] ** 0.5) # (h*bs, curr_max_win_len, emo_num)
+
+        # Activation
+        if last_layer == False:
+            outputs = F.softmax(outputs, dim=-1)  #(h*bs, curr_max_win_len, emo_num)
+        '''
+        # Query Masking  图注意力部分、输出部分都会排除掉填充部分， 这里填充部分正常处理即可
+        query_masks = torch.sign(torch.abs(torch.sum(queries, dim=-1)))  # (N, T_q)
+        query_masks = query_masks.repeat(self.num_heads, 1)  # (h*N, T_q)
+        query_masks = torch.unsqueeze(query_masks, 2).repeat(1, 1, keys.size()[1])  # (h*N, T_q, T_k)
+        outputs = outputs * query_masks
+        '''
+        # Dropouts 中间层的emotion attention添加dropout  输出层做预测时不加
+        outputs = self.output_dropout(outputs)  # (h*bs, curr_max_win_len, emo_num)
+        if last_layer == True: # head=1 直接返回置信度  此时dropout=0
+            return outputs #  (bs, curr_max_win_len, emo_num)
+        # Weighted sum
+        outputs = torch.bmm(outputs, V_)  # (h*bs, curr_max_win_len, feat_dim/h)
+        # Restore shape
+        outputs = torch.cat(torch.chunk(outputs, self.num_heads, dim=0), dim=2)  # (bs, curr_max_win_len, feat_dim)
+        # Residual connection
+        outputs += queries # (bs, curr_max_win_len, feat_dim)
+
+        return outputs # (bs, curr_max_win_len, feat_dim)
+class BiLSTM(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+        super(BiLSTM, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.bilstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, bidirectional=True)
+        self.fc = nn.Linear(hidden_dim * 2, output_dim)  # 乘以2是因为双向LSTM会将正向和逆向的隐藏状态拼接在一起
+        self.w_omiga = torch.randn(input_dim,2*hidden_dim,1,requires_grad=True)#batchsize=4
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_dim).to(x.device)  # 初始化正向和逆向的隐藏状态
+        c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_dim).to(x.device)  # 初始化正向和逆向的细胞状态
+
+        out, _ = self.bilstm(x, (h0, c0))  # 获取双向LSTM的输出
+        # print("**********lin81 out",out.shape)#torch.Size([4, 11, 1536])
+        H = torch.nn.Tanh()(out)
+        self.w_omiga = torch.randn(H.shape[0],2*self.hidden_dim,1,requires_grad=True).to(x.device)
+        # self.w_omiga=self.w_omiga
+        weights = torch.nn.Softmax(dim=-1)(torch.bmm(H,self.w_omiga).squeeze()).unsqueeze(dim=-1).repeat(1,1,self.hidden_dim * 2)
+        # print("*******lin85 weights",weights.shape)#torch.Size([4, 11, 1536])
+        out = torch.mul(out,weights)
+        # print("************lin86 out.shape ",out.shape)#torch.Size([4, 11, 1536])
+        out = self.fc(out[:, :, :])  # 取最后一个时间步的输出作为模型的输出
+        
+        
+        return out
 def get_semantic_adj(adj_index, max_len):
     semantic_adj = []
     for speaker in adj_index:  # 遍历每个对话 对应的说话人列表（非去重）

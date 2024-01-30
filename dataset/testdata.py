@@ -5,4 +5,4 @@ with open('dailydialog_DD.pkl', 'rb') as file:
     data = pickle.load(file)
 
 # 打印数据
-print(data)
+print(data[8])
