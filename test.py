@@ -374,33 +374,33 @@ output = cls_pooling(input, filter_size)
 print("CLSPooling结果:", output)
 """
 #******************双视角门控网络结构*************************************
-#需要确保两个输入的第二个维度的大小是相同的（即两个视图在这一维度上具有相同的长度或特征数）。
+# #需要确保两个输入的第二个维度的大小是相同的（即两个视图在这一维度上具有相同的长度或特征数）。
 # class DualViewGate(nn.Module):
 #     def __init__(self, input_size1, input_size2, hidden_size):
 #         super(DualViewGate, self).__init__()
 #         self.fc1 = nn.Linear(input_size1, hidden_size)
 #         self.fc2 = nn.Linear(input_size2, hidden_size)
-#         self.gate = nn.Linear(hidden_size * 2, 300)
+#         self.gate = nn.Linear(3600, 300)#hidden_size * 2
 
 #     def forward(self, x1, x2):
 #         # Process input from view 1
 #         out1 = F.relu(self.fc1(x1))# torch.Size([4, 20, 300])
-
+#         print("*************lin388 out1",out1.shape)
 #         # Process input from view 2
 #         out2 = F.relu(self.fc2(x2))#torch.Size([4, 20, 300])
-#         # print("*************lin391",out1.shape,out2.shape)
+#         print("*************lin391",out1.shape,out2.shape)
 #         # Concatenate the processed views along the second dimension
 #         concatenated = torch.cat((out1, out2), dim=2)#torch.Size([4, 20, 600])
-#         # print("**********394",concatenated.shape)
+#         print("**********394",concatenated.shape)
 #         # Reshape the concatenated tensor to match the expected input for the gate
 #         concatenated = concatenated.view(concatenated.size(0), -1)#torch.Size([4, 12000])
-#         # print("**********397",concatenated.shape)
+#         print("**********397",concatenated.shape)
 #         # Compute gate values
 #         gate_values = torch.sigmoid(self.gate(concatenated))
-#         print("**********",gate_values.shape)
+#         print("**********400",gate_values.shape)
 #         # Expand gate_values to match the dimensions of the views
 #         gate_values = gate_values.unsqueeze(2).expand_as(out1)
-#         print("**********",gate_values.shape)
+#         print("**********403",gate_values.shape)
 #         # Apply gate values to the views
 #         gated_out1 = gate_values * out1
 #         gated_out2 = (1 - gate_values) * out2
@@ -417,14 +417,58 @@ print("CLSPooling结果:", output)
 # hidden_size = 150
 # batch_size=4
 # # Create synthetic data
-# view1_data = torch.rand((batch_size, sequence_length, view1_size))
-# view2_data = torch.rand((batch_size, sequence_length, view2_size))
+# view1_data = torch.rand((6, 12, 300))
+# view2_data = torch.rand((6, 12, 300))
 
 # dual_view_gate = DualViewGate(view1_size, view2_size, hidden_size)
 # output = dual_view_gate(view1_data, view2_data)
+# print("lin425",output.shape)
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
+class DualViewGate(nn.Module):
+    def __init__(self, input_size_view1, input_size_view2, hidden_size):
+        super(DualViewGate, self).__init__()
+        self.fc_view1 = nn.Linear(input_size_view1, hidden_size)
+        self.fc_view2 = nn.Linear(input_size_view2, hidden_size)
+        self.gate1 = nn.Linear(hidden_size, 1)
+        self.gate2 = nn.Linear(hidden_size, 1)
 
+    def forward(self, x1, x2):
+        x1 = F.relu(self.fc_view1(x1))
+        x2 = F.relu(self.fc_view2(x2))
+        
+        gate1 = torch.sigmoid(self.gate1(x1))
+        gate2 = torch.sigmoid(self.gate2(x2))
+        
+        x1_weighted = x1 * gate1
+        x2_weighted = x2 * gate2
+        # x1_weighted = x1_weighted.expand(-1, 20, -1)
+        combined = x1_weighted + x2_weighted
+        return combined
+
+# 使用示例
+input_size_view1 = 300  # 输入视图1的特征维度
+input_size_view2 = 200  # 输入视图2的特征维度
+hidden_size = 300  # 隐藏层的维度
+batch_size = 6  # 批量大小
+seq_length = 20  # 序列长度
+
+# 生成随机的输入数据
+input_view1_data = torch.rand(batch_size, 20, input_size_view1)
+input_view2_data = torch.rand(batch_size, 20, input_size_view2)
+
+# 初始化 DualViewGate 模型
+model = DualViewGate(input_size_view1, input_size_view2, hidden_size)
+
+# 进行前向传播
+output = model(input_view1_data, input_view2_data)
+print("**********lin471 output ",output.shape)
 
 #**********************************交叉注意力********************************
 # class CrossAttention(nn.Module):
@@ -700,19 +744,19 @@ print("CLSPooling结果:", output)
         
 #         return out
 
-# input_size=10
-# hidden_size=300
-# num_layers=10
+# input_size=768
+# hidden_size=768
+# num_layers=768
 # output_size=2
 # # Create BiLSTM model
-# bilstm=BiLSTM(input_size, hidden_size, num_layers, output_size)
-
+# # bilstm=BiLSTM(input_size, hidden_size, num_layers, output_size)
+# bilstm=BiLSTM(768, 768, 768, 2)
 # # Example input sequence (batch_size=32, sequence_length=20)
-# input_sequence = torch.randn(4,10,10)
+# input_sequence = torch.randn(6,20,768)
+# b=input_sequence.shape[2]
 
-# # Forward pass
 # output = bilstm(input_sequence)
-# print(output.shape)
+# print(output.shape,b)
 
 
 # import dgl
@@ -772,56 +816,56 @@ print("CLSPooling结果:", output)
 
 
 
-class DAGCN(nn.Module):
-    """
-    DAGCN module operated on graph
-    """
+# class DAGCN(nn.Module):
+#     """
+#     DAGCN module operated on graph
+#     """
 
-    def __init__(self):
-        super(DAGCN, self).__init__()
-        # self.args = args
-        self.in_dim = 768
-        self.num_layers = 8
-        # self.dropout = nn.Dropout(args.dropout)
+#     def __init__(self):
+#         super(DAGCN, self).__init__()
+#         # self.args = args
+#         self.in_dim = 768
+#         self.num_layers = 8
+#         # self.dropout = nn.Dropout(args.dropout)
 
-        self.proj = nn.Linear(self.in_dim, 1)
+#         self.proj = nn.Linear(self.in_dim, 1)
 
-    def conv_l2(self):
-        conv_weights = []
-        for w in self.W:
-            conv_weights += [w.weight, w.bias]
-        return sum([x.pow(2).sum() for x in conv_weights])
+#     def conv_l2(self):
+#         conv_weights = []
+#         for w in self.W:
+#             conv_weights += [w.weight, w.bias]
+#         return sum([x.pow(2).sum() for x in conv_weights])
 
-    def forward(self, feature, graph_adj):
-        B = graph_adj.size(0) # 批大小
+#     def forward(self, feature, graph_adj):
+#         B = graph_adj.size(0) # 批大小
 
-        preds = [] # eq8里的H
-        preds.append(feature) # 存Z
+#         preds = [] # eq8里的H
+#         preds.append(feature) # 存Z
 
-        for l in range(self.num_layers):
-            denom = torch.diag_embed(graph_adj.sum(2))  # 度矩阵D
-            deg_inv_sqrt = denom.pow(-0.5) # D 的-1/2次方
-            deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-            deg_inv_sqrt = deg_inv_sqrt.detach()
-            adj_ = deg_inv_sqrt.bmm(graph_adj) # D 的-1/2次方 * A
-            adj_ = adj_.bmm(deg_inv_sqrt) # (D 的-1/2次方 * A * D 的-1/2次方) 即 A_l
+#         for l in range(self.num_layers):
+#             denom = torch.diag_embed(graph_adj.sum(2))  # 度矩阵D
+#             deg_inv_sqrt = denom.pow(-0.5) # D 的-1/2次方
+#             deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+#             deg_inv_sqrt = deg_inv_sqrt.detach()
+#             adj_ = deg_inv_sqrt.bmm(graph_adj) # D 的-1/2次方 * A
+#             adj_ = adj_.bmm(deg_inv_sqrt) # (D 的-1/2次方 * A * D 的-1/2次方) 即 A_l
 
-            feature = adj_.transpose(-1, -2).bmm(feature) # eq8里的 H_l
-            preds.append(feature) # 存到 H里
-        #
-        pps = torch.stack(preds, dim=2)  # (B, N, L+1, D)  H
-        retain_score = self.proj(pps)  # (B, N, L+1, 1)
-        retain_score0 = torch.sigmoid(retain_score).view(-1, self.num_layers + 1, 1)  # (B*N, L+1, 1) eq8里的 S
+#             feature = adj_.transpose(-1, -2).bmm(feature) # eq8里的 H_l
+#             preds.append(feature) # 存到 H里
+#         #
+#         pps = torch.stack(preds, dim=2)  # (B, N, L+1, D)  H
+#         retain_score = self.proj(pps)  # (B, N, L+1, 1)
+#         retain_score0 = torch.sigmoid(retain_score).view(-1, self.num_layers + 1, 1)  # (B*N, L+1, 1) eq8里的 S
 
-        retain_score = retain_score0.transpose(-1, -2)  # (B* N, 1, L+1) eq8里的 S ~
-        out = retain_score.bmm(
-            pps.view(-1, self.num_layers + 1, self.in_dim))  # (B*N, 1, L+1) * (B*N, L+1, D) = (B* N, 1, D)
-        out = out.squeeze(1).view(B, -1, self.in_dim)  # (B, N, D) eq8里的 X_out
+#         retain_score = retain_score0.transpose(-1, -2)  # (B* N, 1, L+1) eq8里的 S ~
+#         out = retain_score.bmm(
+#             pps.view(-1, self.num_layers + 1, self.in_dim))  # (B*N, 1, L+1) * (B*N, L+1, D) = (B* N, 1, D)
+#         out = out.squeeze(1).view(B, -1, self.in_dim)  # (B, N, D) eq8里的 X_out
 
-        return out # 返回图中节点的表示
+#         return out # 返回图中节点的表示
     
-s=DAGCN()##torch.Size([4, 330/x, 768]) torch.Size([4, 330/x, 330/x]),输出torch.Size([4, 330/x, 768]) 
-f=torch.randn(4,300,768)
-f2=torch.randn(4, 300, 300)
-s1=s(f,f2)
-print("********",s1.shape)
+# s=DAGCN()##torch.Size([4, 330/x, 768]) torch.Size([4, 330/x, 330/x]),输出torch.Size([4, 330/x, 768]) 
+# f=torch.randn(4,300,768)
+# f2=torch.randn(4, 300, 300)
+# s1=s(f,f2)
+# print("********",s1.shape)

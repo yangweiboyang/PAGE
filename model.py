@@ -19,8 +19,17 @@ class PaG(nn.Module):
         self.rel_num = self.window + 2
         self.rgcn = RGCNConv(utter_dim,utter_dim,self.rel_num,num_bases=num_bases)
         self.bilstm=BiLSTM(input_size, hidden_size, num_layers, output_size)
-    
-    def forward(self,x,adj_index):
+        # input_dim_a = input_a.shape[-1]
+        # input_dim_b = input_b.shape[-1]
+        # hidden_dim = 64
+        self.cross_attention = CrossAttention(300, 10,600)
+        # self.cross_attention = CrossAttention(300)
+        self.dropout = nn.Dropout(0.1)
+        input_size_view1 = 300  # 输入视图1的特征维度
+        input_size_view2 = 300  # 输入视图2的特征维度
+        hidden_size = 300  # 隐藏层的维度
+        self.dualviewgate=DualViewGate(input_size_view1, input_size_view2, hidden_size)
+    def forward1(self,x,adj_index,emo_emb):#,act
         # print("******lin24",x.shape,x)
         # mm=x
         batch_size = x.shape[0]#x的形状torch.Size([bc, x, 300])
@@ -51,16 +60,13 @@ class PaG(nn.Module):
         for i in range(1,batch_size):
             h = self.rgcn(x[i],index,edge_type)
             out = torch.cat((out,h.unsqueeze(0)),dim=0)#形状跟x相同
-        # print("********************lin53",out.shape)    
+           
         # outp=mm    #adj_index.shape  adj_index torch.Size([4, 2, 15, 15])后两位一样
-        # print("******************lin56 adj_index",adj_index.shape)
-        spkear=get_semantic_adj(adj_index,self.max_len ) #说话人信息  [x,10,10]
-        # print("**************lin53",spkear)
-        spkear = spkear.to(torch.float)
-        spkear=spkear.to(x.device) 
-        spkear=self.bilstm(spkear)
-        print("*************lin50 speaker",spkear.shape)
         
+        spkear=get_semantic_adj(adj_index,self.max_len ) #说话人信息  [x,10,10]
+        spkear = spkear.to(torch.float)
+        spkear=spkear.to(x.device) #torch.Size([6, 10, 10])
+        # spkear=self.bilstm(spkear)#torch.Size([6, 10, 10])
         m2=out.shape[1]
         spkear= spkear[:,:m2,:]
         tensor_fixed=torch.randn(out.shape[0],out.shape[1],out.shape[2])
@@ -76,9 +82,119 @@ class PaG(nn.Module):
         #torch.Size([1, 10, 10])后面两个维度确定 torch.Size([1, 8, 300])最后一位300确定，第二维小于或者大于10
         #torch.Size([4, 10, 10]) torch.Size([4, 11, 300]) torch.Size([4, 2, 11, 11])第二位2是确定的，第三位和前面第二位一样
         
-        out=torch.cat([out,tensor_fixed],dim=2)#torch.Size([4, x, 310])
         
+        # a=out.shape[-1]
+        # b=tensor_fixed.shape[-1]
+        # m=CrossAttention(a,b,768)
+        # m=m.to(x.device)
+        # out=m(out,tensor_fixed)
+        padded_tensor = torch.zeros(emo_emb.size(0),emo_emb.size(1), 300)
+
+# 将原始张量的值复制到新张量的前200列
+        padded_tensor[:, :, :200] = emo_emb
+        padded_tensor=padded_tensor.to(x.device)
+        # m=CrossAttention(300)
+        # m=m.to(x.device)
+        out1=self.cross_attention(out,padded_tensor)#torch.Size([6, x, 700/410])
+        # print("*******************lin96 out1 out.shape",out1.shape,out.shape)
+        out=torch.cat([out1,tensor_fixed],dim=2)#torch.Size([4, x, 310])
+        # print("*****************lin99 out.shape",out.shape)
         out=out[:,:,:300]
+        # out1=out1[:,:,:300]
+        # # print("*************lin97 e o",out1.shape,out.shape)
+        # out=self.dualviewgate(out,out1)
+        # out1=out1[:,:,:300]
+        # act=self.bilstm(act)
+        # out=torch.cat([out,out1])
+        # out=out+self.dropout(out1)
+        # print("*****************lin105 out.shape",out.shape)
+        # out=out[:,:,:300]
+        
+
+# 定义模型
+       
+        return out,rel_emb_k,rel_emb_v
+    
+    def forward(self,x,adj_index,emo_emb):#,act
+        # print("******lin24",x.shape,x)
+        # mm=x
+        batch_size = x.shape[0]#x的形状torch.Size([bc, x, 300])
+        x_dim = x.shape[2]
+        slen = x.shape[1]
+        src_pos = torch.arange(slen).unsqueeze(0)
+        tgt_pos = torch.arange(slen).unsqueeze(1)
+        pos_mask = (tgt_pos - src_pos) + 1
+        pos_mask = pos_mask.to(x.device)
+        
+        position_mask = torch.clamp(pos_mask, min=0, max=self.max_len).long()
+        rel_emb_k = self.pe_k(position_mask)
+        rel_emb_v = self.pe_v(position_mask)
+        
+        rel_emb_k = rel_emb_k.unsqueeze(0).expand(batch_size, slen, slen, self.posi_dim)
+        rel_emb_v = rel_emb_v.unsqueeze(0).expand(batch_size, slen, slen, self.posi_dim)
+
+        rel_adj = (src_pos - tgt_pos).to(x.device)
+        
+        self.rgcn.to(x.device)
+
+        rel_adj = rel_adj_create(rel_adj,slen,self.window)
+        index = index_create(slen).to(x.device)
+        
+        edge_type = torch.flatten(rel_adj).long().to(x.device)
+
+        out = self.rgcn(x[0],index,edge_type).unsqueeze(0)
+        for i in range(1,batch_size):
+            h = self.rgcn(x[i],index,edge_type)
+            out = torch.cat((out,h.unsqueeze(0)),dim=0)#形状跟x相同
+           
+        # outp=mm    #adj_index.shape  adj_index torch.Size([4, 2, 15, 15])后两位一样
+        
+        spkear=get_semantic_adj(adj_index,self.max_len ) #说话人信息  [x,10,10]
+        spkear = spkear.to(torch.float)
+        spkear=spkear.to(x.device) #torch.Size([6, 10, 10])
+        # spkear=self.bilstm(spkear)#torch.Size([6, 10, 10])
+        m2=out.shape[1]
+        spkear= spkear[:,:m2,:]
+        tensor_fixed=torch.randn(out.shape[0],out.shape[1],out.shape[2])
+        tensor_fixed=tensor_fixed.to(x.device)
+# 如果第一个维度的长度小于所需长度，可以填充
+# 这里使用了随机数填充，你可以选择其他填充策略
+        if  spkear.shape[1] < m2:
+            padding_size = m2 - spkear.shape[1]
+            padding_values = torch.randn(spkear.shape[0],padding_size, spkear.shape[2])
+            padding_values=padding_values.to(x.device)
+            tensor_fixed = torch.cat([spkear, padding_values], dim=1)#torch.Size([4, x, 10]
+        # print("**********************lin50 spkear.shape,out.shape,adj_index.shape",spkear.shape,out.shape,adj_index.shape)
+        #torch.Size([1, 10, 10])后面两个维度确定 torch.Size([1, 8, 300])最后一位300确定，第二维小于或者大于10
+        #torch.Size([4, 10, 10]) torch.Size([4, 11, 300]) torch.Size([4, 2, 11, 11])第二位2是确定的，第三位和前面第二位一样
+        # out=torch.cat([out,tensor_fixed],dim=2)#torch.Size([4, x, 310])
+        
+        # a=out.shape[-1]
+        # b=tensor_fixed.shape[-1]
+        # m=CrossAttention(a,b,768)
+        # m=m.to(x.device)
+        # out=m(out,tensor_fixed)
+        
+        e=emo_emb.shape[-1]
+        b=tensor_fixed.shape[-1]
+        m=CrossAttention(e,b,768)
+        m=m.to(x.device)
+        out1=m(emo_emb,tensor_fixed)#torch.Size([6, x, 700/410])
+        # print("*******************lin96 out1 out.shape",out1.shape,out.shape)
+        out=out[:,:,:300]
+        out1=out1[:,:,:300]
+        # print("*************lin97 e o",out1.shape,out.shape)
+        out=self.dualviewgate(out,out1)
+        # out1=out1[:,:,:300]
+        # act=self.bilstm(act)
+        # out=torch.cat([out,out1])
+        # out=out+self.dropout(out1)
+        # print("*****************lin105 out.shape",out.shape)
+        out=out[:,:,:300]
+        
+
+# 定义模型
+       
         return out,rel_emb_k,rel_emb_v
 
 class EmotionAttentionLayer(nn.Module):
@@ -141,6 +257,85 @@ class EmotionAttentionLayer(nn.Module):
         outputs += queries # (bs, curr_max_win_len, feat_dim)
 
         return outputs # (bs, curr_max_win_len, feat_dim)
+
+class DualViewGate(nn.Module):
+    def __init__(self, input_size_view1, input_size_view2, hidden_size):
+        super(DualViewGate, self).__init__()
+        self.fc_view1 = nn.Linear(input_size_view1, hidden_size)
+        self.fc_view2 = nn.Linear(input_size_view2, hidden_size)
+        self.gate1 = nn.Linear(hidden_size, 1)
+        self.gate2 = nn.Linear(hidden_size, 1)
+
+    def forward(self, x1, x2):
+        x1 = F.relu(self.fc_view1(x1))
+        x2 = F.relu(self.fc_view2(x2))
+        
+        gate1 = torch.sigmoid(self.gate1(x1))
+        gate2 = torch.sigmoid(self.gate2(x2))
+        
+        x1_weighted = x1 * gate1
+        x2_weighted = x2 * gate2
+        combined = x1_weighted + x2_weighted
+        return combined
+    
+class CrossAttention1(nn.Module):
+    def __init__(self, input_dim):
+        super(CrossAttention1, self).__init__()
+        self.input_dim = input_dim
+        self.linear_q = nn.Linear(input_dim, input_dim)
+        self.linear_k = nn.Linear(input_dim, input_dim)
+        self.linear_v = nn.Linear(input_dim, input_dim)
+        
+    def forward(self, seq_a, seq_b):
+        # 计算 query、key、value
+        query = self.linear_q(seq_a)
+        key = self.linear_k(seq_b)
+        value = self.linear_v(seq_b)
+        
+        # 计算注意力权重
+        scores = torch.matmul(query, key.transpose(-2, -1))
+        attn_weights = torch.nn.functional.softmax(scores, dim=-1)
+        
+        # 应用注意力权重
+        output = torch.matmul(attn_weights, value)
+        
+        return output
+class CrossAttention(nn.Module):
+    def __init__(self, input_dim_a, input_dim_b, hidden_dim):
+        super(CrossAttention, self).__init__()
+ 
+        self.linear_a = nn.Linear(input_dim_a, hidden_dim)
+        self.linear_b = nn.Linear(input_dim_b, hidden_dim)
+ 
+    def forward(self, input_a, input_b):
+        # 线性映射
+        mapped_a = self.linear_a(input_a)  # (batch_size, seq_len_a, hidden_dim)
+        mapped_b = self.linear_b(input_b)  # (batch_size, seq_len_b, hidden_dim)
+        y = mapped_b.transpose(1, 2)
+ 
+        # 计算注意力权重
+        scores = torch.matmul(mapped_a, mapped_b.transpose(1, 2))  # (batch_size, seq_len_a, seq_len_b)
+        attentions_a = torch.softmax(scores, dim=-1)  # 在维度2上进行softmax，归一化为注意力权重 (batch_size, seq_len_a, seq_len_b)
+        attentions_b = torch.softmax(scores.transpose(1, 2), dim=-1)  # 在维度1上进行softmax，归一化为注意力权重 (batch_size, seq_len_b, seq_len_a)
+ 
+        # 使用注意力权重来调整输入表示
+        # print(attentions_a.shape,input_b.shape)
+        output_a = torch.matmul(attentions_b.transpose(1,2), input_b)  # (batch_size, seq_len_a, input_dim_b)
+        output_b = torch.matmul(attentions_a.transpose(1, 2), input_a)  # (batch_size, seq_len_b, input_dim_a)
+        
+        padding_values = torch.randn(input_a.shape[0],input_a.shape[1], input_a.shape[2])
+        padding_values=padding_values.to(input_a.device)
+        output_a=output_a.to(input_a.device)
+        output_b=output_b.to(input_a.device)
+        output_a=torch.cat([output_a, padding_values], dim=2)#xin
+        
+        out = torch.cat((output_a,output_b),dim=2)#xin
+        return out
+ 
+ 
+# 准备数据
+
+
 class BiLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
         super(BiLSTM, self).__init__()
